@@ -105,9 +105,17 @@ uvicorn backend.app_main:app --reload
 3. Все тесты были пройдены.
 
 
-4. `2 passed, 1 warning` было не очень понятно при первом запуске.
+4. - `2 passed, 1 warning` было не очень понятно при первом запуске.
 
-   также, была ошибка с запуском оманды `uvicorn backend.app_main:app --reload` 
+   - также, была ошибка с запуском оманды `uvicorn backend.app_main:app --reload`
+
+   - была ошибка в `routers.py`, не было ` @app.get("/health", tags=["health"])`, 
+перепутал в `test_health_endpoint.py` вместо `assert response.json() == {"status": "ok"}`, 
+написал `assert response.json() == {
+        "service": "python-backend-trainee-task",
+        "version": "0.1.0",
+    }
+`
 
 
 5. Пока не очень знаю что можно еще улучшить, т.к. как не знаю основную цель проекта.
