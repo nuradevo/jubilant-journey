@@ -1,0 +1,354 @@
+# API endpoint task — FastAPI router + tests
+
+Привет! Это второе backend-задание.
+
+Цель — добавить маленький API endpoint в существующий FastAPI sandbox-проект.
+
+Ты должен сделать не просто `return {"ok": true}`, а небольшой API-модуль с router'ом, Pydantic-схемами и тестами.
+
+---
+
+## 1. Правила
+
+1. Работай только в своей ветке `trainee/api-endpoint-task`.
+2. Не коммить напрямую в `main`.
+3. Все команды запускай из корня repo, где лежат `README.md` и `requirements.txt`.
+4. Не добавляй базу данных.
+5. Не добавляй новые зависимости.
+6. Не переписывай существующий `/health`.
+7. Делай маленький понятный diff.
+8. Если что-то не запускается — опиши ошибку в `REPORT.md`.
+
+---
+
+## 2. Что нужно реализовать
+
+Добавь API для простых учебных задач/items.
+
+Нужны endpoint'ы:
+
+| Method | Path | Что делает |
+| --- | --- | --- |
+| `GET` | `/api/v1/items` | возвращает список items |
+| `GET` | `/api/v1/items/{item_id}` | возвращает один item по id |
+| `POST` | `/api/v1/items` | создаёт новый item in-memory и возвращает его |
+
+---
+
+## 3. Модель item
+
+Item должен иметь поля:
+
+```json
+{
+  "id": 1,
+  "title": "Read FastAPI docs",
+  "description": "Understand APIRouter and TestClient",
+  "is_done": false
+}
+```
+
+Поля:
+
+- `id`: integer;
+- `title`: string, обязательное поле;
+- `description`: string или `null`;
+- `is_done`: boolean, по умолчанию `false`.
+
+---
+
+## 4. Рекомендуемая структура файлов
+
+Добавь новые файлы:
+
+```text
+backend/src/api/__init__.py
+backend/src/api/v1/__init__.py
+backend/src/api/v1/items.py
+backend/tests/test_items_api.py
+REPORT.md
+```
+
+Измени существующий файл, чтобы подключить router:
+
+```text
+backend/src/bootstrap/app_factory.py
+```
+
+Если тебе удобнее подключить router через `backend/src/bootstrap/routers.py`, можно сделать так, но объясни это в `REPORT.md`.
+
+---
+
+## 5. Подсказка по router
+
+В `backend/src/api/v1/items.py` можно создать `APIRouter`:
+
+```python
+from fastapi import APIRouter, HTTPException, status
+from pydantic import BaseModel, Field
+
+router = APIRouter(prefix="/api/v1/items", tags=["items"])
+```
+
+Можно использовать in-memory список:
+
+```python
+_ITEMS = [
+    {
+        "id": 1,
+        "title": "Read FastAPI docs",
+        "description": "Understand APIRouter and TestClient",
+        "is_done": False,
+    },
+    {
+        "id": 2,
+        "title": "Write endpoint tests",
+        "description": None,
+        "is_done": False,
+    },
+]
+```
+
+Важно: это учебное задание, поэтому in-memory данные допустимы. В реальном backend обычно будет база данных/repository/service слой.
+
+---
+
+## 6. Требуемое поведение
+
+### `GET /api/v1/items`
+
+Должен вернуть список.
+
+Ожидаемый статус:
+
+```text
+200 OK
+```
+
+Минимально в списке должны быть 2 стартовых item.
+
+---
+
+### `GET /api/v1/items/1`
+
+Должен вернуть item с `id = 1`.
+
+Ожидаемый статус:
+
+```text
+200 OK
+```
+
+---
+
+### `GET /api/v1/items/999`
+
+Если item не найден, должен вернуть:
+
+```text
+404 Not Found
+```
+
+JSON может быть таким:
+
+```json
+{"detail": "Item not found"}
+```
+
+---
+
+### `POST /api/v1/items`
+
+Пример request body:
+
+```json
+{
+  "title": "Add API endpoint",
+  "description": "Implement POST /api/v1/items"
+}
+```
+
+Ожидаемый статус:
+
+```text
+201 Created
+```
+
+Ожидаемый response body:
+
+```json
+{
+  "id": 3,
+  "title": "Add API endpoint",
+  "description": "Implement POST /api/v1/items",
+  "is_done": false
+}
+```
+
+---
+
+## 7. Тесты, которые нужно написать
+
+Создай файл:
+
+```text
+backend/tests/test_items_api.py
+```
+
+Минимально нужны 4 теста:
+
+1. `GET /api/v1/items` возвращает список и status `200`;
+2. `GET /api/v1/items/1` возвращает один item и status `200`;
+3. `GET /api/v1/items/999` возвращает status `404`;
+4. `POST /api/v1/items` создаёт item и возвращает status `201`.
+
+Примерный каркас:
+
+```python
+from fastapi.testclient import TestClient
+
+from backend.src.bootstrap.app_factory import create_app
+
+
+def test_list_items_returns_seed_items() -> None:
+    client = TestClient(create_app())
+
+    response = client.get("/api/v1/items")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    assert len(data) >= 2
+    assert data[0]["id"] == 1
+
+
+def test_get_item_by_id_returns_item() -> None:
+    client = TestClient(create_app())
+
+    response = client.get("/api/v1/items/1")
+
+    assert response.status_code == 200
+    assert response.json()["id"] == 1
+
+
+def test_get_unknown_item_returns_404() -> None:
+    client = TestClient(create_app())
+
+    response = client.get("/api/v1/items/999")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Item not found"}
+
+
+def test_create_item_returns_created_item() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        "/api/v1/items",
+        json={
+            "title": "Add API endpoint",
+            "description": "Implement POST /api/v1/items",
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["title"] == "Add API endpoint"
+    assert response.json()["is_done"] is False
+```
+
+---
+
+## 8. Как запустить проверки
+
+Из корня repo:
+
+```bash
+python -m pytest backend/tests -q
+```
+
+Если ты оказался внутри `backend/`, сначала вернись в корень repo:
+
+```bash
+cd ..
+python -m pytest backend/tests -q
+```
+
+Сервер можно запустить из корня repo:
+
+```bash
+python -m uvicorn backend.app_main:app --reload
+```
+
+Проверить endpoint вручную можно так:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/items
+curl http://127.0.0.1:8000/api/v1/items/1
+```
+
+---
+
+## 9. REPORT.md
+
+Создай файл:
+
+```text
+REPORT.md
+```
+
+Ответь:
+
+1. Какие файлы ты добавил?
+2. Какие файлы изменил?
+3. Где подключил router?
+4. Какие endpoint'ы реализовал?
+5. Какие команды запускал?
+6. Прошли ли тесты?
+7. Что было непонятно?
+8. Что бы ты улучшил, если бы было больше времени?
+
+---
+
+## 10. Что должно быть в Pull Request
+
+В PR ожидается:
+
+- `backend/src/api/__init__.py`;
+- `backend/src/api/v1/__init__.py`;
+- `backend/src/api/v1/items.py`;
+- изменение в `backend/src/bootstrap/app_factory.py` или `backend/src/bootstrap/routers.py` для подключения router;
+- `backend/tests/test_items_api.py`;
+- `REPORT.md`.
+
+PR не должен содержать:
+
+- `.venv/`;
+- `__pycache__/`;
+- `.pytest_cache/`;
+- случайные большие файлы;
+- секреты, токены, пароли;
+- изменения, не связанные с заданием.
+
+---
+
+## 11. Критерии хорошего результата
+
+Хороший результат:
+
+- все тесты проходят;
+- endpoint'ы работают вручную через browser/curl;
+- router вынесен в отдельный файл;
+- Pydantic используется для request/response моделей;
+- `404` обработан через `HTTPException`;
+- PR маленький и понятный;
+- `REPORT.md` честный и понятный.
+
+Плохие сигналы:
+
+- кандидат переписал весь проект;
+- удалил `/health`;
+- добавил базу данных без задачи;
+- добавил лишние зависимости;
+- не смог объяснить, где router подключается к app;
+- не написал тесты;
+- закоммитил `.venv` или cache-файлы.
