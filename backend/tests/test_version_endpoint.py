@@ -18,9 +18,3 @@ def register_utility_routes(app: FastAPI) -> None:
     async def health() -> dict[str, str]:
         return {"status": "ok"}
 
-    @app.get("/version", tags=["version"])
-    async def version() -> dict[str, str]:
-        return {
-            "service": "python-backend-trainee-task",
-            "version": "0.1.0",
-        }
