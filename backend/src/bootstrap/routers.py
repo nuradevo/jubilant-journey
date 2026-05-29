@@ -14,6 +14,11 @@ def register_utility_routes(app: FastAPI) -> None:
             "base_url": str(request.base_url),
         }
 
-    @app.get("/health", tags=["health"])
-    async def health() -> dict[str, str]:
-        return {"status": "ok"}
+
+    @app.get("/version", tags=["version"])
+    async def version() -> dict[str, str]:
+        return {
+            "status": "ok",
+            "service": "python-main-trainee-task",
+            "version": "0.1.0",
+        }
